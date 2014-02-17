@@ -51,7 +51,7 @@ int main (int argCount, char *argValues[]) {
 		}
 	}
 
-	socketDescriptor = socket(	res->ai_family, res->ai_socktype, res->ai_protocol);
+	socketDescriptor = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (socketDescriptor < 0) {
 		perror("Socket Creation Failed");
 		exit(-1);
