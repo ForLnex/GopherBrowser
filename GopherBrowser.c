@@ -3,13 +3,15 @@
 #include <stdbool.h>
 #include <string.h>
 
-char** tokenize(char * str, char delim);
+#define NUM_TOKENS 5
+
+char **tokenize(char *str, char delim);
 int findChar(char *str, char delim, int startPos);
-char *subString(char * str, int start, int end);
+char *subString(char *str, int start, int end);
 
 int main(int argc, char *argv[]){
   FILE *fp;
-  char ** tokens;
+  char **tokens;
   char *line;
   size_t len = 0;
   ssize_t read;
@@ -25,40 +27,42 @@ int main(int argc, char *argv[]){
     }
     while ((read = getline(&line, &len, fp)) != -1){
       tokens = tokenize(line, '\t');
-      for(int i = 0; i < 5; i++)
+      for(int i = 0; i < NUM_TOKENS; i++)
         printf("%s\n", tokens[i]);
+      free(line);
       line = NULL;
+      for(int i=0;i<NUM_TOKENS;i++) free(tokens[i]);
+      free(tokens);
     }
+    free(line);
     fclose(fp);
     return 0;
   }
 }
 
-char ** tokenize(char * str, char delim){
-  char **tokens = malloc(5 * sizeof(char*));
+char **tokenize(char *str, char delim){
+  char **tokens;
   int lastEnd = 1;
   int newEnd = 0;
 
-  if (str == NULL || delim == '\0')
-    tokens = NULL;
-  else{
-    tokens = malloc(5*sizeof(char*));
-
-    tokens[0] = malloc(sizeof(char));	
+  if (str == NULL || delim == '\0') {
+    return NULL;
+  } else {
+    tokens = malloc(NUM_TOKENS*(sizeof(char *)));
+    tokens[0] = malloc(sizeof(char)*2);
     strncpy(tokens[0], str, 1);
     tokens[0][1] = '\0';
 
-    for(int i = 1; i < 5; ++i){
-      tokens[i] = malloc(sizeof(char));
-      if(i != 4)
+    for(int i = 1; i < NUM_TOKENS; ++i){
+      if(i < NUM_TOKENS)
         newEnd = findChar(str, '\t', lastEnd);
       else
         newEnd = findChar(str, '\r', lastEnd);
-      tokens[i]=subString(str, lastEnd, newEnd);
+      tokens[i] = subString(str, lastEnd, newEnd);
       lastEnd = newEnd+1;
-    }	
+    }
   }
-  return tokens;	
+  return tokens;
 }
 
 int findChar(char *str, char delim, int startPos){
@@ -70,6 +74,10 @@ int findChar(char *str, char delim, int startPos){
 }
 
 char *subString(char * str, int start, int end){
+  if(end == -1) {
+    // Copy till end
+    end = strlen(str);
+  }
   int len = end - start;
   char *ret = malloc(len+1);
 
@@ -78,3 +86,4 @@ char *subString(char * str, int start, int end){
   ret[len] = '\0';
   return ret;
 }
+
