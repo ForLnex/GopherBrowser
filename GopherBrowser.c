@@ -27,6 +27,7 @@ int main(int argc, char *argv[]){
 			tokens = tokenize(line, '\t');
 			for(int i = 0; i < 5; i++)
 				printf("%s\n", tokens[i]);
+			line = NULL;
 		}
 		fclose(fp);
 		return 0;
