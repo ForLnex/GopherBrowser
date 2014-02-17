@@ -28,17 +28,6 @@ int main(int argc, char *argv[]){
 			for(int i = 0; i < 5; i++)
 				printf("%s\n", tokens[i]);
 		}
-		
-		/*
-		while(fgets(str, 200, fp)!=NULL){
-		token = strtok(str, "\t");
-		while (token !=NULL){
-			printf("%s\n",token);
-			token = strtok(NULL, "\t");
-		}
-		fputs(str, stdout);	
-	}
-	*/
 		fclose(fp);
 		return 0;
 	}
