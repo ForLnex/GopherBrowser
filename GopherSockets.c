@@ -26,23 +26,19 @@ int main (int argCount, char *argValues[]) {
 		exit (-1);
 	}
 	strncpy(server, argValues[1],255);
-	server[255] = '\0'; // Null character.
+	server[255] = '\0';
 	bzero(&hints, sizeof(hints));
 	hints.ai_flags = AI_V4MAPPED | AI_ALL;
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	/*
-	 * Check if we can connect using IPv4 -- Just look up 
-	 * the address using inet_pton
-	 */
 	int retCode = 0;
 	retCode = inet_pton(AF_INET, server, &serverAddress);
-	if (retCode == 1) { // It was a valid ipv4 text address
+	if (retCode == 1) { // valid ipv4 address
 		hints.ai_family = AF_INET;
 	} else {
 		retCode = inet_pton(AF_INET6, server, &serverAddress);
-		if (retCode == 1) { /* valid ipv6 address */
+		if (retCode == 1) { // valid ipv6 address 
 			hints.ai_family = AF_INET6;
 		}
 	}
@@ -55,17 +51,13 @@ int main (int argCount, char *argValues[]) {
 		}
 	}
 
-	socketDescriptor = socket(	res->ai_family,
-										res->ai_socktype,
-										res->ai_protocol);
+	socketDescriptor = socket(	res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (socketDescriptor < 0) {
 		perror("Socket Creation Failed");
 		exit(-1);
 	}
 
-	status = connect (socketDescriptor, 
-							res->ai_addr, 
-							res->ai_addrlen);
+	status = connect (socketDescriptor, res->ai_addr, res->ai_addrlen);
 	if (status != 0) {
 		perror("Connect Failed");
 		exit(-1);
