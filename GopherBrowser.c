@@ -5,14 +5,17 @@
 
 #define NUM_TOKENS 5
 
-char **tokenize(char *str, char delim);
-int findChar(char *str, char delim, int startPos);
-char *subString(char *str, int start, int end);
+char** tokenize(char* str, char delim);
+int findChar(char* str, char delim, int startPos);
+char* subString(char* str, int start, int end);
 
-int main(int argc, char *argv[]){
-	FILE *fp;
-	char **tokens;
-	char *line;
+/*
+ * The following opens a Gopher formatted file and prints its tokens.
+ *
+int main(int argc, char* argv[]){
+	FILE* fp;
+	char** tokens;
+	char* line;
 	size_t len = 0;
 	ssize_t read;
 
@@ -25,23 +28,41 @@ int main(int argc, char *argv[]){
 			perror("Error opening file");
 			exit(EXIT_FAILURE);
 		}
+
+		//Read the whole file line-by-line, tokenize each line and print the tokens
 		while ((read = getline(&line, &len, fp)) != -1){
 			tokens = tokenize(line, '\t');
 			for(int i = 0; i < NUM_TOKENS; i++)
 				printf("%s\n", tokens[i]);
-			free(line);
-			line = NULL;
-			for(int i=0;i<NUM_TOKENS;i++) free(tokens[i]);
+			
+			//Free up memory that was allocated
+			for(int i=0;i<NUM_TOKENS;i++)
+				free(tokens[i]);
 			free(tokens);
+			free(line);
+			
+			//Setting line = NULL tells getline to handle memory allocation itself
+			line = NULL;
 		}
 		free(line);
 		fclose(fp);
 		return 0;
 	}
 }
+*/
 
-char **tokenize(char *str, char delim){
-	char **tokens;
+// This method reads the Gopher data via sockets rather than using Files
+int main(int argc, char* argv[]){
+	char** tokens;
+	char* buffer;
+	
+	//Dunno
+	if(argc !=) 
+}
+
+//Because strtok is awful and I refuse to learn how to use it
+char** tokenize(char* str, char delim){
+	char** tokens;
 	int lastEnd = 1;
 	int newEnd = 0;
 
@@ -63,8 +84,10 @@ char **tokenize(char *str, char delim){
 		}
 	}
 	return tokens;
+}
 
-int findChar(char *str, char delim, int startPos){
+//finds the next instance of delim in str starting at startPos
+int findChar(char* str, char delim, int startPos){
 	for(int i = startPos; str[i] != '\0'; i++)
 		if(str[i] == delim)
 			return i;
@@ -72,7 +95,8 @@ int findChar(char *str, char delim, int startPos){
 	return -1;
 }
 
-char *subString(char * str, int start, int end){
+//Because I'm already reimplimenting C's string functions to not be awful
+char* subString(char* str, int start, int end){
 	if(end == -1) {
 		// Copy till end
 		end = strlen(str);
