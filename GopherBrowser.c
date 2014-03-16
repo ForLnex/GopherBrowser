@@ -11,18 +11,20 @@
 #include <strings.h>
 #include <string.h>
 #include <netdb.h>
+
 extern int errno;
-const int MAXECHOLEN=16536;
+const size_t MAXECHOLEN=1024;
 
 #define NUM_TOKENS 5
 
 char** tokenize(char* str, char delim);
 int findChar(char* str, char delim, int startPos);
 char* subString(char* str, int start, int end);
+ssize_t readLine(int fd, void* buffer, size_t n);
 
 /*
  * The following opens a Gopher formatted file and prints its tokens.
- */
+ *
 int main(int argc, char* argv[]){
 	FILE* fp;
 	char** tokens;
@@ -59,18 +61,9 @@ int main(int argc, char* argv[]){
 		fclose(fp);
 		return 0;
 	}
-}
+}*/
 
 // This method reads the Gopher data via sockets rather than using Files
-/*
- * This is commented out because I'm dumb.  echoResponse doesn't
- * just contain individual lines, it contains 0-MAXECHOLEN characters
- * from the server, newlines and all.  To get sockets to *really* work
- * I need to pull out the individual lines, and also set up a way to 
- * stitch together lines that are split between two reads.
- *
- * In other words:
- * TODO: tokenize the lines in the input.
 int main (int argCount, char *argValues[]) {
 	int socketDescriptor;
 	char* testString="\r\n";
@@ -126,11 +119,15 @@ int main (int argCount, char *argValues[]) {
 	int bytesRead;
 	status = write(socketDescriptor, testString, strlen(testString));
 	do {
-		bytesRead = read(socketDescriptor, echoResponse, MAXECHOLEN);
-		echoResponse[bytesRead] = 0;
+		bytesRead = readLine(socketDescriptor, echoResponse, MAXECHOLEN);
+		if (bytesRead == -1){
+			printf("Improperly formatted server");	
+			exit(EXIT_FAILURE);
+		}
 		printf("\n%s",echoResponse);	
 		tokens = tokenize(echoResponse, '\t');
 			for(int i = 0; i < NUM_TOKENS; i++)
+				//do stuff with tokens
 				printf("%s\n", tokens[i]);
 			
 			//Free up memory that was allocated
@@ -138,11 +135,65 @@ int main (int argCount, char *argValues[]) {
 				free(tokens[i]);
 			free(tokens);
 	} while (bytesRead > 0);
+	
 	close(socketDescriptor);
-	exit(0);
-}*/
+	
+	return 0;
+}
 
-//Because strtok is awful and I refuse to learn how to use it
+//Based heavily upon the function found at man7.org/tlpi/code/online/dist/sockets/read_line.c.html
+//
+//Changed to read until it finds a \r character, at which point it reads one more character,
+//verifies that the character is \n, and then returns the line minus \r\n.  If \r is not followed
+//by \n, returns an error (as Gopher lines must end with CRLF
+ssize_t readLine(int fd, void* buffer, size_t n){
+	ssize_t numRead;
+	size_t totRead;
+	char* buf;
+	char ch;
+
+	if (n <= 0 || buffer == NULL){
+		errno = EINVAL;
+		return -1;
+	}
+	buf = buffer;
+
+	totRead = 0;
+	for (;;){
+		numRead = read(fd, &ch, 1);
+
+		if (numRead == -1){
+			if (errno == EINTR)
+				continue;
+			else
+				return -1;
+		}
+		else if (numRead == 0) {
+			if (totRead == 0)
+				return 0;
+			else
+				break;
+		}
+		else{
+			if (ch == '\r'){
+				numRead = read(fd, &ch, 1);
+				if (ch == '\n')	
+					break;
+				errno = EINVAL;
+				return -1;
+			}
+			if (totRead < n - 1){
+				totRead++;
+				*buf++ = ch;
+			}
+		}
+	}
+	*buf = '\0';
+	return totRead;
+}
+
+
+//Because strtok is awful and I refuse to learn how to use it.
 char** tokenize(char* str, char delim){
 	char** tokens;
 	int lastEnd = 1;
