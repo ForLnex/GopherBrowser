@@ -21,7 +21,7 @@ char** tokenize(char* str, char delim);
 int findChar(char* str, char delim, int startPos);
 char* subString(char* str, int start, int end);
 ssize_t readLine(int fd, void* buffer, size_t n);
-
+int getSocket(char* server, char* port);
 /*
  * The following opens a Gopher formatted file and prints its tokens.
  *
@@ -63,16 +63,20 @@ int main(int argc, char* argv[]){
 	}
 }*/
 
+typedef struct Link {
+	char type[2];
+	char url[100];
+	char port[6];
+} Link;
+
 // This method reads the Gopher data via sockets rather than using Files
 int main (int argCount, char *argValues[]) {
-	int socketDescriptor;
-	char* testString="\r\n";
-	struct sockaddr_in serverAddress;
-	struct addrinfo hints, *res=NULL;
+	int socketDescriptor, bytesRead, totalOptions;
 	char echoResponse[MAXECHOLEN];
-	int status, i;
-	char server[256], port[]="70";
+	char server[256];
 	char** tokens;
+	char port[]="70";
+	Link links[100];
 
 	if (argCount != 2) {
 		fprintf(stderr, "Usage: %s <server name>\n", argValues[0]);
@@ -80,6 +84,68 @@ int main (int argCount, char *argValues[]) {
 	}
 	strncpy(server, argValues[1],255);
 	server[255] = '\0';
+
+	socketDescriptor = getSocket(server, port);
+	
+	totalOptions = 0;
+	do {
+		bytesRead = readLine(socketDescriptor, echoResponse, MAXECHOLEN);
+		if (bytesRead == -1){
+			printf("Improperly formatted server");	
+			exit(EXIT_FAILURE);
+		}
+		printf("\n%s\n",echoResponse);	
+		tokens = tokenize(echoResponse, '\t');
+	
+		if (tokens[0] != "i"){
+			//type
+			strcpy( links[totalOptions].type, tokens[0]);
+			//url
+			strcpy( links[totalOptions].url, tokens[3]);
+		   strcat( links[totalOptions].url, 	"/?");
+		   strcat( links[totalOptions].url,	tokens[0]);
+			strcat( links[totalOptions].url, tokens[2]);
+			//port
+			strcpy( links[totalOptions].port, tokens[4]);
+			totalOptions++;
+			printf("%s) ", totalOptions);
+			printf("%s\n", tokens[1]);
+		}
+		else
+			printf("%s\n",tokens[1]);
+
+		//Free up memory that was allocated
+		for(int i=0;i<NUM_TOKENS;i++)
+			free(tokens[i]);
+		free(tokens);
+	} while (bytesRead > 0);
+
+	//getUserInput(links);
+	
+	//free up memory
+	for(int i=0; i < totalOptions; i++){
+		free(links[i].url);
+		free(links[i].port);
+		free(links[i]);
+	}
+	free(links);
+
+	close(socketDescriptor);
+	
+	return 0;
+}
+
+void printDirectory(char* server, char* port){
+	
+}
+
+int getSocket(char* server, char* port){
+	int socketDescriptor;
+	char* testString="\r\n";
+	struct sockaddr_in serverAddress;
+	struct addrinfo hints, *res=NULL;
+	int status;
+
 	bzero(&hints, sizeof(hints));
 	hints.ai_flags = AI_V4MAPPED | AI_ALL;
 	hints.ai_family = AF_UNSPEC;
@@ -116,29 +182,9 @@ int main (int argCount, char *argValues[]) {
 		exit(-1);
 	}
 
-	int bytesRead;
 	status = write(socketDescriptor, testString, strlen(testString));
-	do {
-		bytesRead = readLine(socketDescriptor, echoResponse, MAXECHOLEN);
-		if (bytesRead == -1){
-			printf("Improperly formatted server");	
-			exit(EXIT_FAILURE);
-		}
-		printf("\n%s",echoResponse);	
-		tokens = tokenize(echoResponse, '\t');
-			for(int i = 0; i < NUM_TOKENS; i++)
-				//do stuff with tokens
-				printf("%s\n", tokens[i]);
-			
-			//Free up memory that was allocated
-			for(int i=0;i<NUM_TOKENS;i++)
-				free(tokens[i]);
-			free(tokens);
-	} while (bytesRead > 0);
-	
-	close(socketDescriptor);
-	
-	return 0;
+
+	return socketDescriptor;	
 }
 
 //Based heavily upon the function found at man7.org/tlpi/code/online/dist/sockets/read_line.c.html
