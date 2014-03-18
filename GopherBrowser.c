@@ -17,11 +17,20 @@ const size_t MAXECHOLEN=1024;
 
 #define NUM_TOKENS 5
 
+typedef struct Link {
+	char type;
+	char url[100];
+	char port[6];
+} Link;
+
 char** tokenize(char* str, char delim);
 int findChar(char* str, char delim, int startPos);
 char* subString(char* str, int start, int end);
 ssize_t readLine(int fd, void* buffer, size_t n);
 int getSocket(char* server, char* port);
+void getUserInput(Link* links, int oldSocket);
+void printDirectory(int socket);
+void printTextFile(int newSocket);
 /*
  * The following opens a Gopher formatted file and prints its tokens.
  *
@@ -63,20 +72,12 @@ int main(int argc, char* argv[]){
 	}
 }*/
 
-typedef struct Link {
-	char type[2];
-	char url[100];
-	char port[6];
-} Link;
 
 // This method reads the Gopher data via sockets rather than using Files
 int main (int argCount, char *argValues[]) {
-	int socketDescriptor, bytesRead, totalOptions;
-	char echoResponse[MAXECHOLEN];
 	char server[256];
-	char** tokens;
 	char port[]="70";
-	Link links[100];
+	int socket;
 
 	if (argCount != 2) {
 		fprintf(stderr, "Usage: %s <server name>\n", argValues[0]);
@@ -85,21 +86,33 @@ int main (int argCount, char *argValues[]) {
 	strncpy(server, argValues[1],255);
 	server[255] = '\0';
 
-	socketDescriptor = getSocket(server, port);
-	
+	socket = getSocket(server, port);
+	printDirectory(socket);	
+	return 0;
+}
+
+void printDirectory(int socket){
+	int bytesRead, totalOptions;
+	char echoResponse[MAXECHOLEN];
+	char** tokens;
+	Link links[100];
+
 	totalOptions = 0;
 	do {
-		bytesRead = readLine(socketDescriptor, echoResponse, MAXECHOLEN);
+		bytesRead = readLine(socket, echoResponse, MAXECHOLEN);
 		if (bytesRead == -1){
 			printf("Improperly formatted server");	
 			exit(EXIT_FAILURE);
 		}
 		printf("\n%s\n",echoResponse);	
+		//A mysterious segfault is happening right here.  I don't know how or why.
+		//It worked fine last week and it worked fine an hour ago.  Suddenly it segfaults.
+		//But only on the school machines.  I don't understand :(
 		tokens = tokenize(echoResponse, '\t');
 	
 		if (tokens[0] != "i"){
 			//type
-			strcpy( links[totalOptions].type, tokens[0]);
+			links[totalOptions].type = tokens[0][0];
 			//url
 			strcpy( links[totalOptions].url, tokens[3]);
 		   strcat( links[totalOptions].url, 	"/?");
@@ -120,23 +133,47 @@ int main (int argCount, char *argValues[]) {
 		free(tokens);
 	} while (bytesRead > 0);
 
-	//getUserInput(links);
+	getUserInput(links, socket);
 	
-	//free up memory
-	for(int i=0; i < totalOptions; i++){
-		free(links[i].url);
-		free(links[i].port);
-		free(links[i]);
-	}
-	free(links);
-
-	close(socketDescriptor);
-	
-	return 0;
+	close(socket);
 }
 
-void printDirectory(char* server, char* port){
+void getUserInput(Link* links, int oldSocket){
+	char input[3];
+	int i, newSocket;
+
+	printf("Enter item number to go to: ");
+	fgets(input, 3, stdin);
+	i = atoi(input);
+
+	newSocket = getSocket(links[i].url, links[i].port);
+
+	switch(links[i].type){
+	case '0':
+		printTextFile(newSocket);
+		printDirectory(oldSocket);
+		break;
+	case '1':
+		printDirectory(newSocket);
+		break;
+	default:
+		printf("Non-implemented type selected!");
+		printDirectory(oldSocket);
+	}	
+
+}
+
+void printTextFile(int newSocket){
+	int bytesRead;
+	char echoResponse[MAXECHOLEN];
 	
+	do{
+		bytesRead = read(socket, echoResponse, MAXECHOLEN);
+		echoResponse[bytesRead] = 0;
+		printf("%s", echoResponse);
+	}while (bytesRead > 0);	
+
+	close(socket);
 }
 
 int getSocket(char* server, char* port){
